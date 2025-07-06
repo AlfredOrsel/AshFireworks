@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PixiJS Fireworks - Version 9</title>
+    <script src="https://pixijs.download/v7.3.2/pixi.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <!-- UI Controls -->
+    <div style="position:fixed;top:10px;left:10px;z-index:1000;color:#fff;font-family:sans-serif;background:rgba(0,0,0,0.6);padding:8px 12px;border-radius:8px;">
+        <label>
+            Particle count:
+            <input type="range" id="particleCountSlider" min="50" max="200" value="120" style="vertical-align:middle;">
+            <span id="particleCountValue">120</span>
+        </label>
+        <label style="margin-left:12px;">
+            <input type="checkbox" id="randomParticleCount" style="vertical-align:middle;">
+            Random
+        </label>
+        <br>
+        <label>
+            Min speed:
+            <input type="range" id="minSpeedSlider" min="1" max="10" value="1" step="0.1" style="vertical-align:middle;width:80px;">
+            <span id="minSpeedValue">1</span>
+        </label>
+        <label style="margin-left:12px;">
+            Max speed:
+            <input type="range" id="maxSpeedSlider" min="1" max="10" value="5" step="0.1" style="vertical-align:middle;width:80px;">
+            <span id="maxSpeedValue">5</span>
+        </label>
+        <br>
+        <label>
+            <input type="checkbox" id="particleTrailCheckbox" checked>
+            Particle trails
+        </label>
+        <label style="margin-left:12px;">
+            <input type="checkbox" id="randomTrailCheckbox">
+            Random
+        </label>
+        <br>
+        <label>
+            Particle lifetime:
+            <input type="range" id="particleLifetimeSlider" min="20" max="80" value="50" style="vertical-align:middle;">
+            <span id="particleLifetimeValue">50</span>
+        </label>
+        <label style="margin-left:12px;">
+            <input type="checkbox" id="randomLifetimeCheckbox">
+            Random
+        </label>
+        <br>
+        <label>
+            Particle gravity:
+            <input type="range" id="particleGravitySlider" min="0" max="1" value="0.04" step="0.1" style="vertical-align:middle;width:80px;">
+            <span id="particleGravityValue">0.04</span>
+        </label>
+        <br>
+        <label>
+            Rocket gravity:
+            <input type="range" id="rocketGravitySlider" min="0" max="0.1" value="0.04" step="0.01" style="vertical-align:middle;width:80px;">
+            <span id="rocketGravityValue">0.04</span>
+        </label>
+        <br>
+        <label>
+            Rocket speed:
+            <input type="range" id="rocketSpeedSlider" min="4" max="10" value="8" step="0.1" style="vertical-align:middle;width:80px;">
+            <span id="rocketSpeedValue">8</span>
+        </label>
+        <br>
+        <label>
+            Explosion trigger (Bottom to top):
+            <input type="range" id="explosionTriggerSlider" min="0" max="100" value="50" step="1" style="vertical-align:middle;width:80px;">
+            <span id="explosionTriggerValue">50</span>
+        </label>
+        <label style="margin-left:12px;">
+            <input type="checkbox" id="randomExplosionTriggerCheckbox">
+            Random
+        </label>
+        <br>
+        <label>
+            <input type="checkbox" id="secondaryExplosionCheckbox" checked>
+            Secondary explosion particles:
+            <input type="range" id="secondaryParticleCountSlider" min="10" max="50" value="25" step="1" style="vertical-align:middle;width:80px;">
+            <span id="secondaryParticleCountValue">25</span>
+        </label>
+        <br>
+        <label>Primary particle color:</label>
+        <label style="margin-left:8px;">
+            <input type="radio" name="primaryParticleColor" id="colorSilver" value="silver" checked> Silver
+        </label>
+        <label style="margin-left:8px;">
+            <input type="radio" name="primaryParticleColor" id="colorGold" value="gold"> Gold
+        </label>
+        <label style="margin-left:8px;">
+            <input type="radio" name="primaryParticleColor" id="colorRandom" value="random"> Random
+        </label>
+        <label style="margin-left:8px;">
+            <input type="radio" name="primaryParticleColor" id="colorMulti" value="multi"> Multi
+        </label>
+    </div>
+    <script>
+        // ================================================
+        // FIREWORKS SIMULATION - VERSION 9
+        // ================================================
+
+        // User controls
+        let particleCount = 120;
+        let randomParticleCount = false;
+        let minExplosionSpeed = 1;
+        let maxExplosionSpeed = 5;
+        let particleTrailsEnabled = true;
+        let randomParticleTrails = false;
+        let particleLifetime = 50;
+        let randomParticleLifetime = false;
+        let particleGravity = 0.04;
+        let rocketGravity = 0.04;
+        let rocketSpeed = 8;
+        let explosionTriggerPercent = 50;
+        let randomExplosionTrigger = false;
+        let secondaryParticleCount = 25;
+        let secondaryExplosionsEnabled = true;
+        let primaryParticleColorMode = "silver";
+
+        const slider = document.getElementById('particleCountSlider');
+        const sliderValue = document.getElementById('particleCountValue');
+        const randomCheckbox = document.getElementById('randomParticleCount');
+        const minSpeedSlider = document.getElementById('minSpeedSlider');
+        const maxSpeedSlider = document.getElementById('maxSpeedSlider');
+        const minSpeedValue = document.getElementById('minSpeedValue');
+        const maxSpeedValue = document.getElementById('maxSpeedValue');
+        const particleTrailCheckbox = document.getElementById('particleTrailCheckbox');
+        const randomTrailCheckbox = document.getElementById('randomTrailCheckbox');
+        const particleLifetimeSlider = document.getElementById('particleLifetimeSlider');
+        const particleLifetimeValue = document.getElementById('particleLifetimeValue');
+        const randomLifetimeCheckbox = document.getElementById('randomLifetimeCheckbox');
+        const particleGravitySlider = document.getElementById('particleGravitySlider');
+        const particleGravityValue = document.getElementById('particleGravityValue');
+        const rocketGravitySlider = document.getElementById('rocketGravitySlider');
+        const rocketGravityValue = document.getElementById('rocketGravityValue');
+        const rocketSpeedSlider = document.getElementById('rocketSpeedSlider');
+        const rocketSpeedValue = document.getElementById('rocketSpeedValue');
+        const explosionTriggerSlider = document.getElementById('explosionTriggerSlider');
+        const explosionTriggerValue = document.getElementById('explosionTriggerValue');
+        const randomExplosionTriggerCheckbox = document.getElementById('randomExplosionTriggerCheckbox');
+        const secondaryParticleCountSlider = document.getElementById('secondaryParticleCountSlider');
+        const secondaryParticleCountValue = document.getElementById('secondaryParticleCountValue');
+        const secondaryExplosionCheckbox = document.getElementById('secondaryExplosionCheckbox');
+
+        // Primary particle color radio buttons
+        document.getElementById('colorSilver').addEventListener('change', (event) => { if (event.target.checked) primaryParticleColorMode = "silver"; });
+        document.getElementById('colorGold').addEventListener('change', (event) => { if (event.target.checked) primaryParticleColorMode = "gold"; });
+        document.getElementById('colorRandom').addEventListener('change', (event) => { if (event.target.checked) primaryParticleColorMode = "random"; });
+        document.getElementById('colorMulti').addEventListener('change', (event) => { if (event.target.checked) primaryParticleColorMode = "multi"; });
+
+        function getPrimaryParticleColor() {
+            switch (primaryParticleColorMode) {
+                case "silver": return 0xC0C0C0;
+                case "gold": return 0xFFD700;
+                case "random": return Math.floor(Math.random() * 0xFFFFFF);
+                // Remove "multi" from here!
+                default: return 0xC0C0C0;
+            }
+        }
+
+        slider.addEventListener('input', () => {
+            particleCount = parseInt(slider.value, 10);
+            sliderValue.textContent = particleCount;
+        });
+        randomCheckbox.addEventListener('change', () => {
+            randomParticleCount = randomCheckbox.checked;
+        });
+        minSpeedSlider.addEventListener('input', () => {
+            minExplosionSpeed = parseFloat(minSpeedSlider.value);
+            minSpeedValue.textContent = minExplosionSpeed;
+            if (minExplosionSpeed > maxExplosionSpeed) {
+                maxExplosionSpeed = minExplosionSpeed;
+                maxSpeedSlider.value = minExplosionSpeed;
+                maxSpeedValue.textContent = minExplosionSpeed;
+            }
+        });
+        maxSpeedSlider.addEventListener('input', () => {
+            maxExplosionSpeed = parseFloat(maxSpeedSlider.value);
+            maxSpeedValue.textContent = maxExplosionSpeed;
+            if (maxExplosionSpeed < minExplosionSpeed) {
+                minExplosionSpeed = maxExplosionSpeed;
+                minSpeedSlider.value = maxExplosionSpeed;
+                minSpeedValue.textContent = maxExplosionSpeed;
+            }
+        });
+        particleTrailCheckbox.addEventListener('change', () => {
+            particleTrailsEnabled = particleTrailCheckbox.checked;
+        });
+        randomTrailCheckbox.addEventListener('change', () => {
+            randomParticleTrails = randomTrailCheckbox.checked;
+        });
+        particleLifetimeSlider.addEventListener('input', () => {
+            particleLifetime = parseInt(particleLifetimeSlider.value, 10);
+            particleLifetimeValue.textContent = particleLifetime;
+        });
+        randomLifetimeCheckbox.addEventListener('change', () => {
+            randomParticleLifetime = randomLifetimeCheckbox.checked;
+        });
+        particleGravitySlider.addEventListener('input', () => {
+            particleGravity = parseFloat(particleGravitySlider.value);
+            particleGravityValue.textContent = particleGravity;
+        });
+        rocketGravitySlider.addEventListener('input', () => {
+            rocketGravity = parseFloat(rocketGravitySlider.value);
+            rocketGravityValue.textContent = rocketGravity.toFixed(2);
+        });
+        rocketSpeedSlider.addEventListener('input', () => {
+            rocketSpeed = parseFloat(rocketSpeedSlider.value);
+            rocketSpeedValue.textContent = rocketSpeed;
+        });
+        explosionTriggerSlider.addEventListener('input', () => {
+            explosionTriggerPercent = parseInt(explosionTriggerSlider.value, 10);
+            explosionTriggerValue.textContent = explosionTriggerPercent;
+        });
+        randomExplosionTriggerCheckbox.addEventListener('change', () => {
+            randomExplosionTrigger = randomExplosionTriggerCheckbox.checked;
+        });
+        secondaryParticleCountSlider.addEventListener('input', () => {
+            secondaryParticleCount = parseInt(secondaryParticleCountSlider.value, 10);
+            secondaryParticleCountValue.textContent = secondaryParticleCount;
+        });
+        secondaryExplosionCheckbox.addEventListener('change', () => {
+            secondaryExplosionsEnabled = secondaryExplosionCheckbox.checked;
+        });
+
+        // Initialize PixiJS
+        const app = new PIXI.Application({
+            width: window.innerWidth,
+            height: window.innerHeight,
+            backgroundColor: 0x000000,
+            antialias: true
+        });
+        document.body.appendChild(app.view);
+
+        // Texture creation
+        function createCircleTexture(radius, color) {
+            const graphic = new PIXI.Graphics();
+            graphic.beginFill(color);
+            graphic.drawCircle(radius, radius, radius);
+            graphic.endFill();
+            return app.renderer.generateTexture(graphic);
+        }
+
+        // Textures
+        const rocketTexture = createCircleTexture(4, 0xFFFFFF);
+        const rocketTrailTexture = createCircleTexture(3, 0xFFFFFF);
+        const explosionParticleTexture = createCircleTexture(5, 0xFFFFFF);
+        const explosionTrailTexture = createCircleTexture(3, 0x888888);
+
+        // Containers
+        const rocketContainer = new PIXI.ParticleContainer(2000, {
+            scale: true, position: true, alpha: true, tint: true
+        });
+        const explosionContainer = new PIXI.ParticleContainer(8000, {
+            scale: true, position: true, alpha: true, tint: true
+        });
+        app.stage.addChild(rocketContainer);
+        app.stage.addChild(explosionContainer);
+
+        // Rocket Trail Class (Version 4 modification)
+        class RocketTrail {
+            constructor(x, y) {
+                this.sprite = new PIXI.Sprite(rocketTrailTexture);
+                this.sprite.anchor.set(0.5);
+                this.sprite.x = x;
+                this.sprite.y = y;
+                this.initialSize = 1.5;
+                this.sprite.scale.set(this.initialSize);
+                this.life = 25;
+                this.currentLife = this.life;
+                this.sprite.alpha = 0.7;
+                rocketContainer.addChild(this.sprite);
+            }
+
+            update() {
+                this.currentLife--;
+                const progress = this.currentLife / this.life;
+                this.sprite.scale.set(this.initialSize * progress);
+                this.sprite.alpha = progress * 0.7;
+                if (this.currentLife <= 0) {
+                    rocketContainer.removeChild(this.sprite);
+                    return false;
+                }
+                return true;
+            }
+        }
+
+        // Rocket Class
+        class Rocket {
+            constructor(x, targetY) {
+                this.sprite = new PIXI.Sprite(rocketTexture);
+                this.sprite.anchor.set(0.5);
+                this.sprite.x = x;
+                this.sprite.y = app.screen.height;
+                this.targetY = targetY;
+                this.activeTrails = [];
+                this.vx = (Math.random() - 0.5) * 2; // random deviation: -1 to +1 px per frame
+                this.vy = -rocketSpeed; // use configurable upward velocity
+                this.initialVy = this.vy; // <-- store initial speed
+                // Set per-rocket explosion trigger percent
+                if (randomExplosionTrigger) {
+                    this.explosionTriggerPercent = Math.floor(Math.random() * 101); // 0-100
+                } else {
+                    this.explosionTriggerPercent = explosionTriggerPercent;
+                }
+                rocketContainer.addChild(this.sprite);
+            }
+
+            addTrail() {
+                this.activeTrails.push(new RocketTrail(this.sprite.x, this.sprite.y));
+            }
+
+            update() {
+                this.sprite.x += this.vx;
+                this.sprite.y += this.vy;
+                this.vy += rocketGravity;
+                this.addTrail();
+
+                for (let i = this.activeTrails.length - 1; i >= 0; i--) {
+                    if (!this.activeTrails[i].update()) {
+                        rocketContainer.removeChild(this.activeTrails[i].sprite);
+                        this.activeTrails.splice(i, 1);
+                    }
+                }
+
+                // Configurable explosion trigger based on percentage of initial speed
+                // 100% = explode immediately, 0% = explode at the top (vy crosses 0)
+                let triggerVy = this.initialVy * (1 - this.explosionTriggerPercent / 100);
+                if (this.vy > triggerVy) {
+                    rocketContainer.removeChild(this.sprite);
+                    return false;
+                }
+                return true;
+            }
+
+            updateTrailsOnly() {
+                for (let i = this.activeTrails.length - 1; i >= 0; i--) {
+                    if (!this.activeTrails[i].update()) {
+                        rocketContainer.removeChild(this.activeTrails[i].sprite);
+                        this.activeTrails.splice(i, 1);
+                    }
+                }
+                return this.activeTrails.length > 0;
+            }
+        }
+
+        // Explosion System
+        class Explosion {
+            constructor(x, y, inheritVx = 0, inheritVy = 0, isSecondary = false, color = null) {
+                this.particles = [];
+                this.trails = [];
+                // Only use the radio for primary explosions
+                this.color = color !== null ? color :
+                    (!isSecondary
+                        ? getPrimaryParticleColor()
+                        : Math.random() * 0xFFFFFF);
+                this.x = x;
+                this.y = y;
+                this.inheritVx = inheritVx;
+                this.inheritVy = inheritVy;
+                this.isSecondary = isSecondary;
+                this.trailsEnabled = !isSecondary && particleTrailsEnabled;
+                if (!isSecondary && randomParticleTrails) {
+                    this.trailsEnabled = Math.random() < 0.5;
+                }
+                this.thisLifetime = particleLifetime;
+                if (!isSecondary && randomParticleLifetime) {
+                    this.thisLifetime = Math.random() * (particleLifetimeSlider.max - particleLifetimeSlider.min) + parseInt(particleLifetimeSlider.min, 10);
+                }
+                if (isSecondary) {
+                    this.thisLifetime = 40;
+                }
+                this.initParticles();
+            }
+
+            initParticles() {
+                let count = this.isSecondary ? secondaryParticleCount : particleCount;
+                if (!this.isSecondary && randomParticleCount) {
+                    count = Math.floor(Math.random() * (slider.max - slider.min + 1)) + parseInt(slider.min, 10);
+                }
+                for (let i = 0; i < count; i++) {
+                    const p = new PIXI.Sprite(explosionParticleTexture);
+                    // Assign random color per particle for multi mode, otherwise use this.color
+                    if (!this.isSecondary && primaryParticleColorMode === "multi") {
+                        p.tint = Math.floor(Math.random() * 0xFFFFFF);
+                    } else {
+                        p.tint = this.color;
+                    }
+                    p.anchor.set(0.5);
+                    p.x = this.x;
+                    p.y = this.y;
+                    const angle = Math.random() * Math.PI * 2;
+                    let speed = Math.random() * (maxExplosionSpeed - minExplosionSpeed) + minExplosionSpeed;
+                    if (this.isSecondary) {
+                        speed *= 0.5;
+                    }
+                    p.vx = Math.cos(angle) * speed + this.inheritVx * 0.5;
+                    p.vy = Math.sin(angle) * speed + this.inheritVy * 0.5;
+                    p.scale.set(this.isSecondary ? 0.3 : 0.5);
+                    p.life = this.thisLifetime;
+                    p.maxLife = this.thisLifetime;
+                    p.hasSpawnedSecondary = false;
+                    explosionContainer.addChild(p);
+                    this.particles.push(p);
+                }
+            }
+
+            addParticleTrail(particle) {
+                if (!this.trailsEnabled) return;
+                const trail = new PIXI.Sprite(explosionTrailTexture);
+                trail.tint = particle.tint; // Use the particle's color
+                trail.alpha = particle.alpha;
+                trail.anchor.set(0.5);
+                trail.x = particle.x;
+                trail.y = particle.y;
+                trail.scale.set(particle.scale.x * 0.9);
+                trail.life = 10;
+                explosionContainer.addChild(trail);
+                this.trails.push(trail);
+            }
+
+            update() {
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const p = this.particles[i];
+                    this.addParticleTrail(p);
+
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += particleGravity;
+                    p.life--;
+                    p.alpha = p.life / p.maxLife;
+
+                    // When particle fades out, spawn secondary explosion if not already done and not a secondary
+                    if (
+                        secondaryExplosionsEnabled &&
+                        !this.isSecondary &&
+                        !p.hasSpawnedSecondary &&
+                        p.life <= 0
+                    ) {
+                        explosions.push(new Explosion(p.x, p.y, 0, 0, true, this.color)); // Pass parent's color
+                        p.hasSpawnedSecondary = true;
+                    }
+
+                    if (p.life <= 0) {
+                        explosionContainer.removeChild(p);
+                        this.particles.splice(i, 1);
+                    }
+                }
+
+                for (let i = this.trails.length - 1; i >= 0; i--) {
+                    const t = this.trails[i];
+                    t.life--;
+                    t.alpha -= 0.04;
+                    if (t.alpha <= 0) {
+                        explosionContainer.removeChild(t);
+                        this.trails.splice(i, 1);
+                    }
+                }
+                return this.particles.length > 0 || this.trails.length > 0;
+            }
+        }
+
+        // Sparkle Cloud Class
+        class SparkleCloud {
+            constructor(x, y, count = 120) {
+                this.sparkles = [];
+                for (let i = 0; i < count; i++) {
+                    const s = new PIXI.Sprite(explosionParticleTexture);
+                    s.tint = 0xFFFFFF;
+                    s.anchor.set(0.5);
+                    s.x = x;
+                    s.y = y;
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = Math.random() * 0.7 + 0.2; // very slow for cloud
+                    s.vx = Math.cos(angle) * speed;
+                    s.vy = Math.sin(angle) * speed;
+                    s.life = 2 * (80 + Math.random() * 40); // double the previous lifetime
+                    s.maxLife = s.life;
+                    s.scale.set(0.3 + Math.random() * 0.08); // same as secondary
+                    s.alpha = 0;
+                    explosionContainer.addChild(s);
+                    this.sparkles.push(s);
+                }
+            }
+            update() {
+                for (let i = this.sparkles.length - 1; i >= 0; i--) {
+                    const s = this.sparkles[i];
+                    s.x += s.vx;
+                    s.y += s.vy;
+                    s.life--;
+
+                    // Invisible for first 40 frames, then appear and flicker
+                    if (s.life > s.maxLife - 40) {
+                        s.alpha = 0;
+                    } else {
+                        s.alpha = Math.max(0, (s.life / s.maxLife));
+                        // Intense flicker: randomly fully on or off
+                        s.alpha = Math.random() < 0.5 ? s.alpha : 0;
+                    }
+                    s.scale.set(0.25 + Math.random() * 0.15);
+
+                    if (s.life <= 0) {
+                        explosionContainer.removeChild(s);
+                        this.sparkles.splice(i, 1);
+                    }
+                }
+                return this.sparkles.length > 0;
+            }
+        }
+
+        // Management systems
+        const activeRockets = [];
+        const fadingTrails = [];
+        const explosions = [];
+        const sparkleClouds = [];
+
+        function launchRocket() {
+            const x = Math.random() * app.screen.width;
+            const targetY = Math.random() * app.screen.height * 0.6;
+            activeRockets.push(new Rocket(x, targetY));
+        }
+
+        // Main loop
+        app.ticker.add(() => {
+            // Update rockets
+            for (let i = activeRockets.length - 1; i >= 0; i--) {
+                if (!activeRockets[i].update()) {
+                    fadingTrails.push(activeRockets[i]);
+                    explosions.push(new Explosion(
+                        activeRockets[i].sprite.x,
+                        activeRockets[i].sprite.y,
+                        activeRockets[i].vx,
+                        activeRockets[i].vy
+                    ));
+                    activeRockets.splice(i, 1);
+                }
+            }
+
+            // Update fading trails
+            for (let i = fadingTrails.length - 1; i >= 0; i--) {
+                if (!fadingTrails[i].updateTrailsOnly()) {
+                    fadingTrails.splice(i, 1);
+                }
+            }
+
+            // Update explosions
+            for (let i = explosions.length - 1; i >= 0; i--) {
+                if (!explosions[i].update()) {
+                    explosions.splice(i, 1);
+                }
+            }
+
+            // Update sparkle clouds
+            for (let i = sparkleClouds.length - 1; i >= 0; i--) {
+                if (!sparkleClouds[i].update()) {
+                    sparkleClouds.splice(i, 1);
+                }
+            }
+        });
+
+        // Auto-launch
+        setInterval(launchRocket, 800);
+
+        // Click to create explosions
+        app.stage.eventMode = 'static';
+        app.stage.on('pointerdown', (e) => {
+            explosions.push(new Explosion(e.global.x, e.global.y));
+        });
+
+        // Right-click handler for sparkle cloud
+        app.view.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            const rect = app.view.getBoundingClientRect();
+            const centerX = e.clientX - rect.left;
+            const centerY = e.clientY - rect.top;
+            const radius = 120; // Max distance from center
+            const numClouds = 32;
+            for (let i = 0; i < numClouds; i++) {
+                // Random angle and random radius (uniform distribution in circle)
+                const angle = Math.random() * Math.PI * 2;
+                const r = Math.sqrt(Math.random()) * radius;
+                const x = centerX + Math.cos(angle) * r;
+                const y = centerY + Math.sin(angle) * r;
+                sparkleClouds.push(new SparkleCloud(x, y));
+            }
+        });
+
+        // Handle resize
+        window.addEventListener('resize', () => {
+            app.renderer.resize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
