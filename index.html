@@ -99,7 +99,52 @@
         <label style="margin-left:8px;">
             <input type="radio" name="primaryParticleColor" id="colorMulti" value="multi"> Multi
         </label>
+        <br>
+        <label>
+            <input type="checkbox" id="autoFireToggle" checked> Auto fire rockets
+        </label>
+        <br>
+        <button id="startShowBtn" style="margin-top: 8px; padding: 6px 12px; border: none; background: #4CAF50; color: white; border-radius: 4px; cursor: pointer; font-size: 14px;">
+            Start Show
+        </button>
     </div>
+
+    <!-- Show JSON Dialog -->
+    <div id="showDialog" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2000; background: rgba(0,0,0,0.9); border: 2px solid #444; border-radius: 8px; padding: 20px; width: 600px; max-width: 90vw; max-height: 80vh; color: #fff; font-family: sans-serif;">
+        <h3 style="margin-top: 0; color: #4CAF50;">Enter Fireworks Show JSON</h3>
+        <textarea id="showJsonInput" style="width: 100%; height: 400px; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; padding: 10px; font-family: monospace; font-size: 12px; resize: vertical; box-sizing: border-box;" placeholder="Enter your fireworks show JSON here...
+
+Example:
+{
+  'name': 'My Show',
+  'duration': 10,
+  'events': [
+    {
+      'time': 0,
+      'type': 'rockets',
+      'count': 5,
+      'spread': 800,
+      'particleColor': '0xC0C0C0',
+      'trailEnabled': true,
+      'secondaryExplosion': false
+    }
+  ]
+}"></textarea>
+        <div style="margin-top: 15px; text-align: right;">
+            <button id="loadExampleBtn" style="margin-right: 10px; padding: 8px 16px; border: none; background: #2196F3; color: white; border-radius: 4px; cursor: pointer;">
+                Load Example
+            </button>
+            <button id="cancelShowBtn" style="margin-right: 10px; padding: 8px 16px; border: none; background: #666; color: white; border-radius: 4px; cursor: pointer;">
+                Cancel
+            </button>
+            <button id="executeShowBtn" style="padding: 8px 16px; border: none; background: #4CAF50; color: white; border-radius: 4px; cursor: pointer;">
+                Start Show
+            </button>
+        </div>
+    </div>
+
+    <!-- Dialog Overlay -->
+    <div id="dialogOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1999;"></div>
     <script>
         // ================================================
         // FIREWORKS SIMULATION - VERSION 9
@@ -122,6 +167,7 @@
         let secondaryParticleCount = 25;
         let secondaryExplosionsEnabled = true;
         let primaryParticleColorMode = "silver";
+        let autoFireEnabled = true;
 
         const slider = document.getElementById('particleCountSlider');
         const sliderValue = document.getElementById('particleCountValue');
@@ -229,6 +275,119 @@
             secondaryExplosionsEnabled = secondaryExplosionCheckbox.checked;
         });
 
+        // Auto fire toggle
+        const autoFireToggle = document.getElementById('autoFireToggle');
+        autoFireToggle.addEventListener('change', () => {
+            autoFireEnabled = autoFireToggle.checked;
+        });
+
+        // Show dialog elements
+        const startShowBtn = document.getElementById('startShowBtn');
+        const showDialog = document.getElementById('showDialog');
+        const dialogOverlay = document.getElementById('dialogOverlay');
+        const showJsonInput = document.getElementById('showJsonInput');
+        const cancelShowBtn = document.getElementById('cancelShowBtn');
+        const executeShowBtn = document.getElementById('executeShowBtn');
+        const loadExampleBtn = document.getElementById('loadExampleBtn');
+
+        // Load example JSON
+        const exampleJSON = {
+            "name": "Simple Test Show",
+            "duration": 8000,
+            "events": [
+                {
+                    "time": 0,
+                    "type": "rockets",
+                    "count": 3,
+                    "spread": 600,
+                    "particleColor": "0xC0C0C0",
+                    "trailEnabled": true,
+                    "secondaryExplosion": false
+                },
+                {
+                    "time": 2000,
+                    "type": "rockets",
+                    "count": 5,
+                    "spread": 800,
+                    "particleColor": "0xFFD700",
+                    "trailEnabled": true,
+                    "secondaryExplosion": true
+                },
+                {
+                    "time": 4000,
+                    "type": "sparkles",
+                    "x": 400,
+                    "y": 200,
+                    "count": 80
+                }
+            ]
+        };
+
+        // Show dialog functionality
+        function openShowDialog() {
+            showDialog.style.display = 'block';
+            dialogOverlay.style.display = 'block';
+            showJsonInput.focus();
+        }
+
+        function closeShowDialog() {
+            showDialog.style.display = 'none';
+            dialogOverlay.style.display = 'none';
+        }
+
+        // Event listeners for dialog
+        startShowBtn.addEventListener('click', openShowDialog);
+        cancelShowBtn.addEventListener('click', closeShowDialog);
+        dialogOverlay.addEventListener('click', closeShowDialog);
+        
+        // Load example button
+        loadExampleBtn.addEventListener('click', () => {
+            showJsonInput.value = JSON.stringify(exampleJSON, null, 2);
+        });
+
+        // Execute show button (now with controller logic)
+        executeShowBtn.addEventListener('click', () => {
+            const jsonText = showJsonInput.value.trim();
+            if (jsonText) {
+                try {
+                    console.log('Raw JSON text:', jsonText);
+                    const showData = JSON.parse(jsonText);
+                    console.log('Parsed show data:', showData);
+                    console.log('Show data type:', typeof showData);
+                    console.log('Events property:', showData.events);
+                    console.log('Events is array:', Array.isArray(showData.events));
+                    
+                    // Validate basic structure
+                    if (!showData.events) {
+                        throw new Error('Show data must have an "events" property');
+                    }
+                    if (!Array.isArray(showData.events)) {
+                        throw new Error('Show data "events" must be an array');
+                    }
+                    if (showData.events.length === 0) {
+                        throw new Error('Show data "events" array cannot be empty');
+                    }
+                    
+                    // Start the timeline controller
+                    timelineController.startShow(showData);
+                    closeShowDialog();
+                } catch (error) {
+                    alert('Invalid JSON format or structure. Please check your input.\n\nError: ' + error.message);
+                    console.error('JSON parsing error:', error);
+                    console.error('Raw input was:', jsonText);
+                }
+            } else {
+                alert('Please enter show JSON data.');
+            }
+        });
+
+        // Close dialog with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && showDialog.style.display === 'block') {
+                closeShowDialog();
+            }
+        });
+
         // Initialize PixiJS
         const app = new PIXI.Application({
             width: window.innerWidth,
@@ -301,8 +460,12 @@
                 this.targetY = targetY;
                 this.activeTrails = [];
                 this.vx = (Math.random() - 0.5) * 2; // random deviation: -1 to +1 px per frame
-                this.vy = -rocketSpeed; // use configurable upward velocity
+                
+                // Use custom rocket speed if set, otherwise use global setting
+                const currentSpeed = this.customRocketSpeed || rocketSpeed;
+                this.vy = -currentSpeed; // use configurable upward velocity
                 this.initialVy = this.vy; // <-- store initial speed
+                
                 // Set per-rocket explosion trigger percent
                 if (randomExplosionTrigger) {
                     this.explosionTriggerPercent = Math.floor(Math.random() * 101); // 0-100
@@ -352,23 +515,30 @@
 
         // Explosion System
         class Explosion {
-            constructor(x, y, inheritVx = 0, inheritVy = 0, isSecondary = false, color = null) {
+            constructor(x, y, inheritVx = 0, inheritVy = 0, isSecondary = false, color = null, customProperties = {}) {
                 this.particles = [];
                 this.trails = [];
-                // Only use the radio for primary explosions
+                
+                // Use custom color if provided, otherwise use default logic
                 this.color = color !== null ? color :
-                    (!isSecondary
-                        ? getPrimaryParticleColor()
-                        : Math.random() * 0xFFFFFF);
+                    (customProperties.particleColor !== undefined ? customProperties.particleColor :
+                        (!isSecondary ? getPrimaryParticleColor() : Math.random() * 0xFFFFFF));
+                
                 this.x = x;
                 this.y = y;
                 this.inheritVx = inheritVx;
                 this.inheritVy = inheritVy;
                 this.isSecondary = isSecondary;
-                this.trailsEnabled = !isSecondary && particleTrailsEnabled;
-                if (!isSecondary && randomParticleTrails) {
+                
+                // Use custom trail setting if provided
+                this.trailsEnabled = customProperties.trailEnabled !== undefined ? 
+                    customProperties.trailEnabled : 
+                    (!isSecondary && particleTrailsEnabled);
+                
+                if (!isSecondary && randomParticleTrails && customProperties.trailEnabled === undefined) {
                     this.trailsEnabled = Math.random() < 0.5;
                 }
+                
                 this.thisLifetime = particleLifetime;
                 if (!isSecondary && randomParticleLifetime) {
                     this.thisLifetime = Math.random() * (particleLifetimeSlider.max - particleLifetimeSlider.min) + parseInt(particleLifetimeSlider.min, 10);
@@ -376,12 +546,20 @@
                 if (isSecondary) {
                     this.thisLifetime = 40;
                 }
+                
+                // Store custom properties
+                this.customParticleCount = customProperties.particleCount;
+                this.customSecondaryExplosion = customProperties.secondaryExplosion;
+                
                 this.initParticles();
             }
 
             initParticles() {
-                let count = this.isSecondary ? secondaryParticleCount : particleCount;
-                if (!this.isSecondary && randomParticleCount) {
+                let count = this.customParticleCount !== undefined ? 
+                    this.customParticleCount : 
+                    (this.isSecondary ? secondaryParticleCount : particleCount);
+                
+                if (!this.isSecondary && randomParticleCount && this.customParticleCount === undefined) {
                     count = Math.floor(Math.random() * (slider.max - slider.min + 1)) + parseInt(slider.min, 10);
                 }
                 for (let i = 0; i < count; i++) {
@@ -437,8 +615,12 @@
                     p.alpha = p.life / p.maxLife;
 
                     // When particle fades out, spawn secondary explosion if not already done and not a secondary
+                    const shouldCreateSecondary = this.customSecondaryExplosion !== undefined ? 
+                        this.customSecondaryExplosion : 
+                        secondaryExplosionsEnabled;
+                    
                     if (
-                        secondaryExplosionsEnabled &&
+                        shouldCreateSecondary &&
                         !this.isSecondary &&
                         !p.hasSpawnedSecondary &&
                         p.life <= 0
@@ -526,17 +708,171 @@
             activeRockets.push(new Rocket(x, targetY));
         }
 
+        // Timeline-based show controller
+        class TimelineController {
+            constructor() {
+                this.isRunning = false;
+                this.startTime = 0;
+                this.currentShow = null;
+                this.eventIndex = 0;
+            }
+
+            startShow(showData) {
+                this.currentShow = showData;
+                this.isRunning = true;
+                this.startTime = Date.now();
+                this.eventIndex = 0;
+                console.log('Starting fireworks show:', showData.name);
+                
+                // Disable auto fire during show
+                autoFireEnabled = false;
+                if (autoFireToggle) {
+                    autoFireToggle.checked = false;
+                }
+            }
+
+            stopShow() {
+                this.isRunning = false;
+                this.currentShow = null;
+                this.eventIndex = 0;
+                console.log('Stopped fireworks show');
+            }
+
+            update() {
+                if (!this.isRunning || !this.currentShow) return;
+
+                const elapsedTime = Date.now() - this.startTime; // Keep in milliseconds
+                const events = this.currentShow.events;
+
+                // Process all events that should have triggered by now
+                while (this.eventIndex < events.length && events[this.eventIndex].time <= elapsedTime) {
+                    this.processEvent(events[this.eventIndex]);
+                    this.eventIndex++;
+                }
+
+                // Check if show is complete
+                if (this.eventIndex >= events.length) {
+                    this.stopShow();
+                }
+            }
+
+            processEvent(event) {
+                console.log('Processing event:', event);
+                
+                switch (event.type) {
+                    case 'rockets':
+                        this.launchRockets(event);
+                        break;
+                    case 'sparkles':
+                        this.createSparkles(event);
+                        break;
+                    case 'pause':
+                        // Pause events are handled by the timeline itself
+                        break;
+                    default:
+                        console.warn('Unknown event type:', event.type);
+                }
+            }
+
+            launchRockets(event) {
+                const count = event.count || 1;
+                const spread = event.spread || app.screen.width;
+                const startX = event.startX || (app.screen.width - spread) / 2;
+                
+                for (let i = 0; i < count; i++) {
+                    let x;
+                    if (count === 1) {
+                        x = startX + spread / 2;
+                    } else {
+                        x = startX + (i * spread) / (count - 1);
+                    }
+                    
+                    const targetY = event.targetY || Math.random() * app.screen.height * 0.6;
+                    
+                    // Create rocket with custom properties
+                    const rocket = new Rocket(x, targetY);
+                    
+                    // Apply event-specific properties
+                    if (event.particleColor !== undefined) {
+                        rocket.customParticleColor = this.parseColor(event.particleColor);
+                    }
+                    if (event.particleCount !== undefined) {
+                        rocket.customParticleCount = event.particleCount;
+                    }
+                    if (event.rocketSpeed !== undefined) {
+                        rocket.customRocketSpeed = event.rocketSpeed;
+                    }
+                    if (event.trailEnabled !== undefined) {
+                        rocket.customTrailEnabled = event.trailEnabled;
+                    }
+                    if (event.secondaryExplosion !== undefined) {
+                        rocket.customSecondaryExplosion = event.secondaryExplosion;
+                    }
+                    
+                    activeRockets.push(rocket);
+                }
+            }
+
+            createSparkles(event) {
+                const x = event.x || Math.random() * app.screen.width;
+                const y = event.y || Math.random() * app.screen.height;
+                const count = event.count || 50;
+                
+                sparkleClouds.push(new SparkleCloud(x, y, count));
+            }
+
+            parseColor(colorValue) {
+                if (typeof colorValue === 'string') {
+                    // Handle hex string like "0xFFFFFF"
+                    if (colorValue.startsWith('0x')) {
+                        return parseInt(colorValue, 16);
+                    }
+                    // Handle regular hex string like "#FFFFFF"
+                    if (colorValue.startsWith('#')) {
+                        return parseInt(colorValue.substring(1), 16);
+                    }
+                }
+                // If it's already a number, return as is
+                return colorValue;
+            }
+        }
+
+        // Create timeline controller instance
+        const timelineController = new TimelineController();
+
         // Main loop
         app.ticker.add(() => {
+            // Update timeline controller
+            timelineController.update();
+            
             // Update rockets
             for (let i = activeRockets.length - 1; i >= 0; i--) {
                 if (!activeRockets[i].update()) {
                     fadingTrails.push(activeRockets[i]);
+                    
+                    // Prepare custom properties for explosion
+                    const customProperties = {};
+                    if (activeRockets[i].customParticleCount !== undefined) {
+                        customProperties.particleCount = activeRockets[i].customParticleCount;
+                    }
+                    if (activeRockets[i].customParticleColor !== undefined) {
+                        customProperties.particleColor = activeRockets[i].customParticleColor;
+                    }
+                    if (activeRockets[i].customTrailEnabled !== undefined) {
+                        customProperties.trailEnabled = activeRockets[i].customTrailEnabled;
+                    }
+                    if (activeRockets[i].customSecondaryExplosion !== undefined) {
+                        customProperties.secondaryExplosion = activeRockets[i].customSecondaryExplosion;
+                    }
+                    
                     explosions.push(new Explosion(
                         activeRockets[i].sprite.x,
                         activeRockets[i].sprite.y,
                         activeRockets[i].vx,
-                        activeRockets[i].vy
+                        activeRockets[i].vy,
+                        false,
+                        null,
+                        customProperties
                     ));
                     activeRockets.splice(i, 1);
                 }
@@ -564,8 +900,12 @@
             }
         });
 
-        // Auto-launch
-        setInterval(launchRocket, 800);
+        // Auto-launch rockets when enabled
+        setInterval(() => {
+            if (autoFireEnabled) {
+                launchRocket();
+            }
+        }, 800);
 
         // Click to create explosions
         app.stage.eventMode = 'static';
