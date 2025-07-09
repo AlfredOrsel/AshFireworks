@@ -10,12 +10,16 @@
 </head>
 <body>
     <!-- UI Controls -->
-    <div style="position:fixed;top:10px;left:10px;z-index:1000;color:#fff;font-family:sans-serif;background:rgba(0,0,0,0.6);padding:8px 12px;border-radius:8px;">
-        <label>
-            Particle count:
-            <input type="range" id="particleCountSlider" min="50" max="200" value="120" style="vertical-align:middle;">
-            <span id="particleCountValue">120</span>
-        </label>
+    <div id="settingsPanel" style="position:fixed;top:10px;left:10px;z-index:1000;color:#fff;font-family:sans-serif;background:rgba(0,0,0,0.6);padding:8px 12px;border-radius:8px;transition:all 0.3s ease;">
+        <div style="display:flex;justify-content:flex-start;align-items:center;margin-bottom:8px;">
+            <button id="collapseBtn" style="background:none;border:none;color:#fff;cursor:pointer;font-size:16px;padding:2px 6px;border-radius:3px;" title="Collapse Settings">−</button>
+        </div>
+        <div id="settingsContent">
+            <label>
+                Particle count:
+                <input type="range" id="particleCountSlider" min="50" max="200" value="120" style="vertical-align:middle;">
+                <span id="particleCountValue">120</span>
+            </label>
         <label style="margin-left:12px;">
             <input type="checkbox" id="randomParticleCount" style="vertical-align:middle;">
             Random
@@ -101,13 +105,31 @@
         </label>
         <br>
         <label>
-            <input type="checkbox" id="autoFireToggle" checked> Auto fire rockets
+            <input type="checkbox" id="autoFireToggle"> Auto fire rockets
+        </label>
+        <label style="margin-left:12px;">
+            <input type="checkbox" id="burstModeToggle"> Burst mode
+        </label>
+        <br>
+        <label>
+            Auto fire interval:
+            <input type="range" id="autoFireIntervalSlider" min="0.2" max="2" value="0.6" step="0.1" style="vertical-align:middle;width:80px;">
+            <span id="autoFireIntervalValue">0.6</span>s
+        </label>
+        <label style="margin-left:12px;">
+            Burst rockets:
+            <input type="range" id="burstRocketsSlider" min="2" max="10" value="3" step="1" style="vertical-align:middle;width:80px;" disabled>
+            <span id="burstRocketsValue">3</span>
         </label>
         <br>
         <button id="startShowBtn" style="margin-top: 8px; padding: 6px 12px; border: none; background: #4CAF50; color: white; border-radius: 4px; cursor: pointer; font-size: 14px;">
             Start Show
         </button>
+        </div>
     </div>
+
+    <!-- Collapsed Settings Button -->
+    <button id="expandBtn" style="position:fixed;top:18px;left:20px;z-index:1000;display:none;background:none;border:none;color:#fff;cursor:pointer;font-size:16px;padding:2px 6px;border-radius:3px;transition:all 0.3s ease;" title="Expand Settings">+</button>
 
     <!-- Show JSON Dialog -->
     <div id="showDialog" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2000; background: rgba(0,0,0,0.9); border: 2px solid #444; border-radius: 8px; padding: 20px; width: 600px; max-width: 90vw; max-height: 80vh; color: #fff; font-family: sans-serif;">
@@ -121,7 +143,7 @@ Example:
   'events': [
     {
       'time': 0,
-      'type': 'rockets',
+      'type': 'rockets',w
       'count': 5,
       'spread': 800,
       'particleColor': '0xC0C0C0',
@@ -146,6 +168,8 @@ Example:
     <!-- Dialog Overlay -->
     <div id="dialogOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1999;"></div>
     <script>
+        console.log('=== FIREWORKS SCRIPT STARTING ===');
+        
         // ================================================
         // FIREWORKS SIMULATION - VERSION 9
         // ================================================
@@ -167,7 +191,9 @@ Example:
         let secondaryParticleCount = 25;
         let secondaryExplosionsEnabled = true;
         let primaryParticleColorMode = "silver";
-        let autoFireEnabled = true;
+        let autoFireEnabled = false;
+        let burstModeEnabled = false;
+        let burstRocketCount = 3;
 
         const slider = document.getElementById('particleCountSlider');
         const sliderValue = document.getElementById('particleCountValue');
@@ -281,6 +307,31 @@ Example:
             autoFireEnabled = autoFireToggle.checked;
         });
 
+        // Burst mode toggle
+        const burstModeToggle = document.getElementById('burstModeToggle');
+        burstModeToggle.addEventListener('change', () => {
+            burstModeEnabled = burstModeToggle.checked;
+            
+            // Enable/disable burst rockets slider based on burst mode state
+            const burstRocketsSlider = document.getElementById('burstRocketsSlider');
+            burstRocketsSlider.disabled = !burstModeEnabled;
+        });
+
+        // Burst rockets slider
+        const burstRocketsSlider = document.getElementById('burstRocketsSlider');
+        const burstRocketsValue = document.getElementById('burstRocketsValue');
+        burstRocketsSlider.addEventListener('input', () => {
+            burstRocketCount = parseInt(burstRocketsSlider.value, 10);
+            burstRocketsValue.textContent = burstRocketCount;
+        });
+
+        // Auto fire interval slider
+        const autoFireIntervalSlider = document.getElementById('autoFireIntervalSlider');
+        const autoFireIntervalValue = document.getElementById('autoFireIntervalValue');
+        autoFireIntervalSlider.addEventListener('input', () => {
+            autoFireIntervalValue.textContent = autoFireIntervalSlider.value;
+        });
+
         // Show dialog elements
         const startShowBtn = document.getElementById('startShowBtn');
         const showDialog = document.getElementById('showDialog');
@@ -388,14 +439,88 @@ Example:
             }
         });
 
+        // Settings panel collapse/expand functionality
+        const settingsPanel = document.getElementById('settingsPanel');
+        const settingsContent = document.getElementById('settingsContent');
+        const collapseBtn = document.getElementById('collapseBtn');
+        const expandBtn = document.getElementById('expandBtn');
+
+        function collapseSettings() {
+            settingsContent.style.display = 'none';
+            settingsPanel.style.display = 'none';
+            expandBtn.style.display = 'block';
+        }
+
+        function expandSettings() {
+            settingsContent.style.display = 'block';
+            settingsPanel.style.display = 'block';
+            expandBtn.style.display = 'none';
+        }
+
+        collapseBtn.addEventListener('click', collapseSettings);
+        expandBtn.addEventListener('click', expandSettings);
+
+        // Add hover effects via JavaScript
+        collapseBtn.addEventListener('mouseenter', () => {
+            collapseBtn.style.background = 'rgba(255,255,255,0.1)';
+        });
+        collapseBtn.addEventListener('mouseleave', () => {
+            collapseBtn.style.background = 'none';
+        });
+
+        expandBtn.addEventListener('mouseenter', () => {
+            expandBtn.style.background = 'rgba(255,255,255,0.1)';
+        });
+        expandBtn.addEventListener('mouseleave', () => {
+            expandBtn.style.background = 'none';
+        });
+
         // Initialize PixiJS
+        console.log('=== INITIALIZING PIXIJS ===');
         const app = new PIXI.Application({
             width: window.innerWidth,
             height: window.innerHeight,
             backgroundColor: 0x000000,
             antialias: true
         });
+        console.log('=== PIXIJS APP CREATED ===');
         document.body.appendChild(app.view);
+        console.log('=== PIXIJS CANVAS ADDED TO BODY ===');
+
+        // FPS Counter
+        let lastTime = performance.now();
+        let frameCount = 0;
+        let fps = 0;
+
+        // Performance monitoring variables
+        let baselineParticles = 0;
+        let baselineFPS = 60;
+        let performanceSamples = [];
+        let lastUpdateTime = performance.now();
+
+        // Create FPS display element
+        const fpsDisplay = document.createElement('div');
+        fpsDisplay.style.cssText = 'position:fixed;top:10px;right:10px;color:#0f0;font-family:monospace;background:rgba(0,0,0,0.7);padding:5px 8px;border-radius:4px;z-index:1001;font-size:14px;font-weight:bold;';
+        fpsDisplay.textContent = 'FPS: --';
+        document.body.appendChild(fpsDisplay);
+
+        // Create particle count display element
+        const particleCountDisplay = document.createElement('div');
+        particleCountDisplay.style.cssText = 'position:fixed;top:40px;right:10px;color:#ff0;font-family:monospace;background:rgba(0,0,0,0.7);padding:5px 8px;border-radius:4px;z-index:1001;font-size:14px;font-weight:bold;';
+        particleCountDisplay.textContent = 'Particles: 0';
+        document.body.appendChild(particleCountDisplay);
+
+        // Create CPU load display element
+        const cpuLoadDisplay = document.createElement('div');
+        cpuLoadDisplay.style.cssText = 'position:fixed;top:70px;right:10px;color:#0ff;font-family:monospace;background:rgba(0,0,0,0.7);padding:5px 8px;border-radius:4px;z-index:1001;font-size:14px;font-weight:bold;';
+        cpuLoadDisplay.textContent = 'CPU: --';
+        document.body.appendChild(cpuLoadDisplay);
+
+        // Create GPU load display element
+        const gpuLoadDisplay = document.createElement('div');
+        gpuLoadDisplay.style.cssText = 'position:fixed;top:100px;right:10px;color:#f0f;font-family:monospace;background:rgba(0,0,0,0.7);padding:5px 8px;border-radius:4px;z-index:1001;font-size:14px;font-weight:bold;';
+        gpuLoadDisplay.textContent = 'GPU: --';
+        document.body.appendChild(gpuLoadDisplay);
 
         // Texture creation
         function createCircleTexture(radius, color) {
@@ -412,13 +537,9 @@ Example:
         const explosionParticleTexture = createCircleTexture(5, 0xFFFFFF);
         const explosionTrailTexture = createCircleTexture(3, 0x888888);
 
-        // Containers
-        const rocketContainer = new PIXI.ParticleContainer(2000, {
-            scale: true, position: true, alpha: true, tint: true
-        });
-        const explosionContainer = new PIXI.ParticleContainer(8000, {
-            scale: true, position: true, alpha: true, tint: true
-        });
+        // Containers - Unlimited for performance testing
+        const rocketContainer = new PIXI.Container();
+        const explosionContainer = new PIXI.Container();
         app.stage.addChild(rocketContainer);
         app.stage.addChild(explosionContainer);
 
@@ -656,16 +777,21 @@ Example:
                     const s = new PIXI.Sprite(explosionParticleTexture);
                     s.tint = 0xFFFFFF;
                     s.anchor.set(0.5);
-                    s.x = x;
-                    s.y = y;
+                    
                     const angle = Math.random() * Math.PI * 2;
                     const speed = Math.random() * 0.7 + 0.2; // very slow for cloud
                     s.vx = Math.cos(angle) * speed;
                     s.vy = Math.sin(angle) * speed;
+                    
+                    // Position sparkles as if they've already traveled for 40 frames
+                    const startRadius = 40 * speed; // distance they would have traveled in 40 frames
+                    s.x = x + Math.cos(angle) * startRadius;
+                    s.y = y + Math.sin(angle) * startRadius;
+                    
                     s.life = 2 * (80 + Math.random() * 40); // double the previous lifetime
                     s.maxLife = s.life;
                     s.scale.set(0.3 + Math.random() * 0.08); // same as secondary
-                    s.alpha = 0;
+                    s.alpha = 1; // Start visible since they're already spread out
                     explosionContainer.addChild(s);
                     this.sparkles.push(s);
                 }
@@ -677,14 +803,10 @@ Example:
                     s.y += s.vy;
                     s.life--;
 
-                    // Invisible for first 40 frames, then appear and flicker
-                    if (s.life > s.maxLife - 40) {
-                        s.alpha = 0;
-                    } else {
-                        s.alpha = Math.max(0, (s.life / s.maxLife));
-                        // Intense flicker: randomly fully on or off
-                        s.alpha = Math.random() < 0.5 ? s.alpha : 0;
-                    }
+                    // Appear immediately and flicker
+                    s.alpha = Math.max(0, (s.life / s.maxLife));
+                    // Intense flicker: randomly fully on or off
+                    s.alpha = Math.random() < 0.5 ? s.alpha : 0;
                     s.scale.set(0.25 + Math.random() * 0.15);
 
                     if (s.life <= 0) {
@@ -840,8 +962,90 @@ Example:
         // Create timeline controller instance
         const timelineController = new TimelineController();
 
+        // Better performance monitoring functions
+        function estimateSystemLoad() {
+            // Count current particles
+            let totalParticles = 0;
+            explosions.forEach(explosion => {
+                totalParticles += explosion.particles.length;
+                totalParticles += explosion.trails.length;
+            });
+            sparkleClouds.forEach(cloud => {
+                totalParticles += cloud.sparkles.length;
+            });
+            activeRockets.forEach(rocket => {
+                totalParticles += rocket.activeTrails.length;
+            });
+            fadingTrails.forEach(trail => {
+                totalParticles += trail.activeTrails.length;
+            });
+            totalParticles += activeRockets.length;
+
+            // Estimate CPU load based on FPS degradation and particle count
+            let cpuLoad = 0;
+            if (fps > 0) {
+                // CPU load increases as FPS drops below 60, and with particle count
+                const fpsRatio = Math.max(0, (60 - fps) / 60);
+                const particleLoad = Math.min(50, totalParticles / 100); // Max 50% from particles
+                cpuLoad = Math.min(100, fpsRatio * 50 + particleLoad);
+            }
+
+            // Estimate GPU load based on particle density and rendering complexity
+            let gpuLoad = 0;
+            if (app.renderer.type === PIXI.RENDERER_TYPE.WEBGL) {
+                // For WebGL, estimate based on particle count and screen fill
+                const screenArea = app.screen.width * app.screen.height;
+                const particleDensity = totalParticles / (screenArea / 1000000); // particles per megapixel
+                const baseLoad = Math.min(30, totalParticles / 200); // Base load from particle count
+                const densityLoad = Math.min(40, particleDensity * 20); // Additional load from density
+                const fpsLoad = Math.max(0, (60 - fps) / 2); // FPS impact on GPU
+                gpuLoad = Math.min(100, baseLoad + densityLoad + fpsLoad);
+            } else {
+                // Canvas renderer is more CPU intensive
+                gpuLoad = Math.min(100, totalParticles / 50);
+            }
+
+            return {
+                cpu: Math.round(cpuLoad),
+                gpu: Math.round(gpuLoad)
+            };
+        }
+
         // Main loop
         app.ticker.add(() => {
+            // FPS calculation
+            frameCount++;
+            const now = performance.now();
+            if (now - lastTime >= 1000) {
+                fps = Math.round(frameCount * 1000 / (now - lastTime));
+                fpsDisplay.textContent = `FPS: ${fps}`;
+                frameCount = 0;
+                lastTime = now;
+                
+                // Update performance displays (once per second)
+                const systemLoad = estimateSystemLoad();
+                cpuLoadDisplay.textContent = `CPU: ${systemLoad.cpu}%`;
+                gpuLoadDisplay.textContent = `GPU: ${systemLoad.gpu}%`;
+            }
+
+            // Update particle count display
+            let totalParticles = 0;
+            explosions.forEach(explosion => {
+                totalParticles += explosion.particles.length;
+                totalParticles += explosion.trails.length;
+            });
+            sparkleClouds.forEach(cloud => {
+                totalParticles += cloud.sparkles.length;
+            });
+            activeRockets.forEach(rocket => {
+                totalParticles += rocket.activeTrails.length;
+            });
+            fadingTrails.forEach(trail => {
+                totalParticles += trail.activeTrails.length;
+            });
+            totalParticles += activeRockets.length; // Count the rockets themselves
+            particleCountDisplay.textContent = `Particles: ${totalParticles}`;
+
             // Update timeline controller
             timelineController.update();
             
@@ -900,17 +1104,79 @@ Example:
             }
         });
 
-        // Auto-launch rockets when enabled
-        setInterval(() => {
-            if (autoFireEnabled) {
-                launchRocket();
+        // Auto-launch rockets when enabled (using dynamic interval)
+        let lastAutoFireTime = Date.now();
+        function checkAutoFire() {
+            const currentTime = Date.now();
+            const intervalMs = parseFloat(document.getElementById('autoFireIntervalSlider').value) * 1000;
+            
+            if (autoFireEnabled && (currentTime - lastAutoFireTime) >= intervalMs) {
+                if (burstModeEnabled) {
+                    // Fire multiple rockets in a burst
+                    for (let i = 0; i < burstRocketCount; i++) {
+                        launchRocket();
+                    }
+                } else {
+                    // Fire single rocket
+                    launchRocket();
+                }
+                lastAutoFireTime = currentTime;
             }
-        }, 800);
+        }
+        
+        setInterval(checkAutoFire, 50); // Check frequently for responsive interval changes
 
-        // Click to create explosions
+        console.log('=== SETTING UP CLICK HANDLERS ===');
+        
+        // Click to create explosions or fire rockets
         app.stage.eventMode = 'static';
         app.stage.on('pointerdown', (e) => {
-            explosions.push(new Explosion(e.global.x, e.global.y));
+            console.log('Click detected! Auto fire enabled:', autoFireEnabled, 'Burst mode enabled:', burstModeEnabled);
+            if (autoFireEnabled) {
+                // When auto fire is enabled, clicking creates explosions
+                console.log('Creating explosion at:', e.global.x, e.global.y);
+                explosions.push(new Explosion(e.global.x, e.global.y));
+            } else {
+                // When auto fire is disabled, clicking fires rockets
+                if (burstModeEnabled) {
+                    // Fire multiple rockets in a burst
+                    console.log('Launching burst of', burstRocketCount, 'rockets');
+                    for (let i = 0; i < burstRocketCount; i++) {
+                        launchRocket();
+                    }
+                } else {
+                    // Fire single rocket
+                    console.log('Launching single rocket');
+                    launchRocket();
+                }
+            }
+        });
+        console.log('=== PIXI CLICK HANDLER SET UP ===');
+
+        // Backup click handler on canvas element
+        app.view.addEventListener('click', (e) => {
+            console.log('Canvas click detected! Auto fire enabled:', autoFireEnabled, 'Burst mode enabled:', burstModeEnabled);
+            const rect = app.view.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            if (autoFireEnabled) {
+                console.log('Creating explosion at:', x, y);
+                explosions.push(new Explosion(x, y));
+            } else {
+                // When auto fire is disabled, clicking fires rockets
+                if (burstModeEnabled) {
+                    // Fire multiple rockets in a burst
+                    console.log('Launching burst of', burstRocketCount, 'rockets');
+                    for (let i = 0; i < burstRocketCount; i++) {
+                        launchRocket();
+                    }
+                } else {
+                    // Fire single rocket
+                    console.log('Launching single rocket');
+                    launchRocket();
+                }
+            }
         });
 
         // Right-click handler for sparkle cloud
