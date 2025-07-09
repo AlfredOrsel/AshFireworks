@@ -11,8 +11,9 @@
 <body>
     <!-- UI Controls -->
     <div id="settingsPanel" style="position:fixed;top:10px;left:10px;z-index:1000;color:#fff;font-family:sans-serif;background:rgba(0,0,0,0.6);padding:8px 12px;border-radius:8px;transition:all 0.3s ease;">
-        <div style="display:flex;justify-content:flex-start;align-items:center;margin-bottom:8px;">
+        <div style="display:flex;justify-content:flex-start;align-items:center;margin-bottom:8px;gap:8px;">
             <button id="collapseBtn" style="padding: 6px 12px; border: none; background: #ff6b6b; color: white; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;" title="Collapse Settings">−</button>
+            <button id="doubleSizeBtn" style="padding: 6px 12px; border: none; background: #2196F3; color: white; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;" title="Double Size for Mobile">A+</button>
         </div>
         <div id="settingsContent">
             <label>
@@ -449,12 +450,14 @@ Example:
             settingsContent.style.display = 'none';
             settingsPanel.style.display = 'none';
             expandBtn.style.display = 'block';
+            doubleSizeBtn.style.display = 'none'; // Hide double size button when collapsed
         }
 
         function expandSettings() {
             settingsContent.style.display = 'block';
             settingsPanel.style.display = 'block';
             expandBtn.style.display = 'none';
+            doubleSizeBtn.style.display = 'inline-block'; // Show double size button when expanded
         }
 
         collapseBtn.addEventListener('click', collapseSettings);
@@ -473,6 +476,109 @@ Example:
         });
         expandBtn.addEventListener('mouseleave', () => {
             expandBtn.style.background = '#4CAF50';
+        });
+
+        // Double size functionality for mobile
+        let isDoubleSize = false;
+        const doubleSizeBtn = document.getElementById('doubleSizeBtn');
+        
+        function toggleDoubleSize() {
+            isDoubleSize = !isDoubleSize;
+            const settingsContent = document.getElementById('settingsContent');
+            const collapseBtn = document.getElementById('collapseBtn');
+            
+            if (isDoubleSize) {
+                // Double the size of all controls
+                settingsContent.style.fontSize = '18px';
+                settingsContent.style.lineHeight = '2.2';
+                
+                // Scale up input elements
+                const inputs = settingsContent.querySelectorAll('input[type="range"], input[type="checkbox"], input[type="radio"]');
+                inputs.forEach(input => {
+                    if (input.type === 'range') {
+                        input.style.width = input.style.width ? (parseInt(input.style.width) * 2) + 'px' : '160px';
+                        input.style.height = '24px';
+                    } else {
+                        input.style.transform = 'scale(1.8)';
+                        input.style.margin = '8px';
+                    }
+                });
+                
+                // Scale up buttons
+                const buttons = settingsContent.querySelectorAll('button');
+                buttons.forEach(button => {
+                    button.style.fontSize = '18px';
+                    button.style.padding = '12px 24px';
+                });
+                
+                // Scale up the collapse button and double size button
+                collapseBtn.style.fontSize = '18px';
+                collapseBtn.style.padding = '12px 24px';
+                doubleSizeBtn.style.fontSize = '18px';
+                doubleSizeBtn.style.padding = '12px 24px';
+                
+                // Update button text
+                doubleSizeBtn.innerHTML = 'A−';
+                doubleSizeBtn.title = 'Normal Size';
+                
+                // Increase panel padding
+                settingsPanel.style.padding = '16px 24px';
+                
+            } else {
+                // Reset to normal size
+                settingsContent.style.fontSize = '';
+                settingsContent.style.lineHeight = '';
+                
+                // Reset input elements
+                const inputs = settingsContent.querySelectorAll('input[type="range"], input[type="checkbox"], input[type="radio"]');
+                inputs.forEach(input => {
+                    if (input.type === 'range') {
+                        input.style.width = input.getAttribute('data-original-width') || '80px';
+                        input.style.height = '';
+                    } else {
+                        input.style.transform = '';
+                        input.style.margin = '';
+                    }
+                });
+                
+                // Reset buttons
+                const buttons = settingsContent.querySelectorAll('button');
+                buttons.forEach(button => {
+                    button.style.fontSize = '14px';
+                    button.style.padding = '6px 12px';
+                });
+                
+                // Reset the collapse button and double size button
+                collapseBtn.style.fontSize = '14px';
+                collapseBtn.style.padding = '6px 12px';
+                doubleSizeBtn.style.fontSize = '14px';
+                doubleSizeBtn.style.padding = '6px 12px';
+                
+                // Update button text
+                doubleSizeBtn.innerHTML = 'A+';
+                doubleSizeBtn.title = 'Double Size for Mobile';
+                
+                // Reset panel padding
+                settingsPanel.style.padding = '8px 12px';
+            }
+        }
+        
+        doubleSizeBtn.addEventListener('click', toggleDoubleSize);
+        
+        // Add hover effects for double size button
+        doubleSizeBtn.addEventListener('mouseenter', () => {
+            doubleSizeBtn.style.background = '#1976D2';
+        });
+        doubleSizeBtn.addEventListener('mouseleave', () => {
+            doubleSizeBtn.style.background = '#2196F3';
+        });
+
+        // Store original widths for range inputs
+        document.addEventListener('DOMContentLoaded', () => {
+            const rangeInputs = document.querySelectorAll('input[type="range"]');
+            rangeInputs.forEach(input => {
+                input.setAttribute('data-original-width', input.style.width || '80px');
+            });
         });
 
         // Initialize PixiJS
