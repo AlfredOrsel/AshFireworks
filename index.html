@@ -13,7 +13,7 @@
     <div id="settingsPanel" style="position:fixed;top:10px;left:10px;z-index:1000;color:#fff;font-family:sans-serif;background:rgba(0,0,0,0.6);padding:8px 12px;border-radius:8px;transition:all 0.3s ease;">
         <div style="display:flex;justify-content:flex-start;align-items:center;margin-bottom:8px;gap:8px;">
             <button id="collapseBtn" style="padding: 6px 12px; border: none; background: #ff6b6b; color: white; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;" title="Collapse Settings">−</button>
-            <button id="doubleSizeBtn" style="padding: 6px 12px; border: none; background: #2196F3; color: white; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;" title="Double Size for Mobile">A+</button>
+            <button id="doubleSizeBtn" style="padding: 12px 24px; border: none; background: #2196F3; color: white; border-radius: 4px; cursor: pointer; font-size: 18px; font-weight: bold;" title="Double Size for Mobile">A+</button>
         </div>
         <div id="settingsContent">
             <label>
@@ -517,6 +517,10 @@ Example:
                 doubleSizeBtn.style.fontSize = '18px';
                 doubleSizeBtn.style.padding = '12px 24px';
                 
+                // Scale up the expand button
+                expandBtn.style.fontSize = '18px';
+                expandBtn.style.padding = '12px 24px';
+                
                 // Update button text
                 doubleSizeBtn.innerHTML = 'A−';
                 doubleSizeBtn.title = 'Normal Size';
@@ -553,6 +557,10 @@ Example:
                 collapseBtn.style.padding = '6px 12px';
                 doubleSizeBtn.style.fontSize = '14px';
                 doubleSizeBtn.style.padding = '6px 12px';
+                
+                // Reset the expand button
+                expandBtn.style.fontSize = '14px';
+                expandBtn.style.padding = '6px 12px';
                 
                 // Update button text
                 doubleSizeBtn.innerHTML = 'A+';
