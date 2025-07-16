@@ -84,8 +84,8 @@
         <br>
         <label>
             Rocket speed:
-            <input type="range" id="rocketSpeedSlider" min="4" max="10" value="8" step="0.1" style="vertical-align:middle;width:80px;">
-            <span id="rocketSpeedValue">8</span>
+            <input type="range" id="rocketSpeedSlider" min="4" max="10" value="7" step="0.1" style="vertical-align:middle;width:80px;">
+            <span id="rocketSpeedValue">7</span>
         </label>
         <br>
         <label>
@@ -103,6 +103,10 @@
             Secondary explosion particles:
             <input type="range" id="secondaryParticleCountSlider" min="10" max="50" value="25" step="1" style="vertical-align:middle;width:80px;">
             <span id="secondaryParticleCountValue">25</span>
+        </label>
+        <label style="margin-left:12px;">
+            <input type="checkbox" id="randomSecondaryTimingCheckbox">
+            Random secondary explosion timing
         </label>
         <br>
         <label>Primary particle color:</label>
@@ -200,11 +204,12 @@ Example:
         let randomParticleLifetime = false;
         let particleGravity = 0.04;
         let rocketGravity = 0.04;
-        let rocketSpeed = 8;
+        let rocketSpeed = 7;
         let explosionTriggerPercent = 50;
         let randomExplosionTrigger = false;
         let secondaryParticleCount = 25;
         let secondaryExplosionsEnabled = true;
+        let randomSecondaryTiming = false;
         let primaryParticleColorMode = "silver";
         let autoFireEnabled = false;
         let burstModeEnabled = false;
@@ -234,6 +239,7 @@ Example:
         const secondaryParticleCountSlider = document.getElementById('secondaryParticleCountSlider');
         const secondaryParticleCountValue = document.getElementById('secondaryParticleCountValue');
         const secondaryExplosionCheckbox = document.getElementById('secondaryExplosionCheckbox');
+        const randomSecondaryTimingCheckbox = document.getElementById('randomSecondaryTimingCheckbox');
 
         // Primary particle color radio buttons
         document.getElementById('colorSilver').addEventListener('change', (event) => { if (event.target.checked) primaryParticleColorMode = "silver"; });
@@ -314,6 +320,9 @@ Example:
         });
         secondaryExplosionCheckbox.addEventListener('change', () => {
             secondaryExplosionsEnabled = secondaryExplosionCheckbox.checked;
+        });
+        randomSecondaryTimingCheckbox.addEventListener('change', () => {
+            randomSecondaryTiming = randomSecondaryTimingCheckbox.checked;
         });
 
         // Auto fire toggle
@@ -946,8 +955,22 @@ Example:
                         !p.hasSpawnedSecondary &&
                         p.life <= 0
                     ) {
-                        explosions.push(new Explosion(p.x, p.y, 0, 0, true, this.color)); // Pass parent's color
                         p.hasSpawnedSecondary = true;
+                        
+                        if (randomSecondaryTiming) {
+                            // Random delay between 0 and 1000ms (1 second)
+                            const delay = Math.random() * 1000;
+                            // Store particle position for delayed explosion
+                            const particleX = p.x;
+                            const particleY = p.y;
+                            const particleColor = p.tint;
+                            setTimeout(() => {
+                                explosions.push(new Explosion(particleX, particleY, 0, 0, true, particleColor));
+                            }, delay);
+                        } else {
+                            // Immediate secondary explosion
+                            explosions.push(new Explosion(p.x, p.y, 0, 0, true, p.tint)); // Pass individual particle's color
+                        }
                     }
 
                     if (p.life <= 0) {
