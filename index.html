@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PixiJS Fireworks - Version 9</title>
+    <title>PixiJS Fireworks - Version 10</title>
     <script src="https://pixijs.download/v7.3.2/pixi.min.js"></script>
     <style>
         body { 
@@ -89,6 +89,23 @@
         </label>
         <br>
         <label>
+            <input type="checkbox" id="rocketMiniExplosionsCheckbox">
+            Rocket mini explosions:
+            <input type="range" id="rocketMiniExplosionIntervalSlider" min="0.2" max="1" value="0.5" step="0.1" style="vertical-align:middle;width:80px;">
+            <span id="rocketMiniExplosionIntervalValue">0.5</span>s
+        </label>
+        <br>
+        <label>
+            Mini explosion particles:
+            <input type="range" id="rocketMiniExplosionParticleCountSlider" min="10" max="50" value="15" style="vertical-align:middle;width:80px;">
+            <span id="rocketMiniExplosionParticleCountValue">15</span>
+        </label>
+        <label style="margin-left:12px;">
+            <input type="checkbox" id="rocketMiniExplosionSecondaryCheckbox">
+            Secondary explosions
+        </label>
+        <br>
+        <label>
             Explosion trigger (Bottom to top):
             <input type="range" id="explosionTriggerSlider" min="0" max="100" value="50" step="1" style="vertical-align:middle;width:80px;">
             <span id="explosionTriggerValue">50</span>
@@ -121,6 +138,24 @@
         </label>
         <label style="margin-left:8px;">
             <input type="radio" name="primaryParticleColor" id="colorMulti" value="multi"> Multi
+        </label>
+        <br>
+        <label>Payload types:</label>
+        <br>
+        <label style="margin-left:8px;">
+            <input type="checkbox" name="payloadType" id="payloadRegular" value="regular" checked> Regular
+        </label>
+        <label style="margin-left:8px;">
+            <input type="checkbox" name="payloadType" id="payloadSparkles" value="sparkles"> Sparkles
+        </label>
+        <label style="margin-left:8px;">
+            <input type="checkbox" name="payloadType" id="payloadSpiral" value="spiral"> Spiral
+        </label>
+        <label style="margin-left:8px;">
+            <input type="checkbox" name="payloadType" id="payloadSpiralCloud" value="spiralcloud"> Spiral Cloud
+        </label>
+        <label style="margin-left:8px;">
+            <input type="checkbox" name="payloadType" id="payloadElliptical" value="elliptical"> Elliptical
         </label>
         <br>
         <label>
@@ -190,7 +225,7 @@ Example:
         console.log('=== FIREWORKS SCRIPT STARTING ===');
         
         // ================================================
-        // FIREWORKS SIMULATION - VERSION 9
+        // FIREWORKS SIMULATION - VERSION 10
         // ================================================
 
         // User controls
@@ -214,6 +249,18 @@ Example:
         let autoFireEnabled = false;
         let burstModeEnabled = false;
         let burstRocketCount = 3;
+        let rocketMiniExplosionsEnabled = false;
+        let rocketMiniExplosionInterval = 0.5;
+        let rocketMiniExplosionParticleCount = 15;
+        let rocketMiniExplosionSecondaryEnabled = false;
+
+        // Payload system variables
+        let payloadRegularEnabled = true;
+        let payloadSparklesEnabled = false;
+        let payloadSpiralEnabled = false;
+        let payloadSpiralCloudEnabled = false;
+        let payloadEllipticalEnabled = false;
+
 
         const slider = document.getElementById('particleCountSlider');
         const sliderValue = document.getElementById('particleCountValue');
@@ -240,12 +287,27 @@ Example:
         const secondaryParticleCountValue = document.getElementById('secondaryParticleCountValue');
         const secondaryExplosionCheckbox = document.getElementById('secondaryExplosionCheckbox');
         const randomSecondaryTimingCheckbox = document.getElementById('randomSecondaryTimingCheckbox');
+        const rocketMiniExplosionsCheckbox = document.getElementById('rocketMiniExplosionsCheckbox');
+        const rocketMiniExplosionIntervalSlider = document.getElementById('rocketMiniExplosionIntervalSlider');
+        const rocketMiniExplosionIntervalValue = document.getElementById('rocketMiniExplosionIntervalValue');
+        const rocketMiniExplosionParticleCountSlider = document.getElementById('rocketMiniExplosionParticleCountSlider');
+        const rocketMiniExplosionParticleCountValue = document.getElementById('rocketMiniExplosionParticleCountValue');
+        const rocketMiniExplosionSecondaryCheckbox = document.getElementById('rocketMiniExplosionSecondaryCheckbox');
+
+        // Payload system elements
+        const payloadRegularCheckbox = document.getElementById('payloadRegular');
+        const payloadSparklesCheckbox = document.getElementById('payloadSparkles');
+        const payloadSpiralCheckbox = document.getElementById('payloadSpiral');
+        const payloadSpiralCloudCheckbox = document.getElementById('payloadSpiralCloud');
+        const payloadEllipticalCheckbox = document.getElementById('payloadElliptical');
 
         // Primary particle color radio buttons
         document.getElementById('colorSilver').addEventListener('change', (event) => { if (event.target.checked) primaryParticleColorMode = "silver"; });
         document.getElementById('colorGold').addEventListener('change', (event) => { if (event.target.checked) primaryParticleColorMode = "gold"; });
         document.getElementById('colorRandom').addEventListener('change', (event) => { if (event.target.checked) primaryParticleColorMode = "random"; });
         document.getElementById('colorMulti').addEventListener('change', (event) => { if (event.target.checked) primaryParticleColorMode = "multi"; });
+
+
 
         function getPrimaryParticleColor() {
             switch (primaryParticleColorMode) {
@@ -254,6 +316,64 @@ Example:
                 case "random": return Math.floor(Math.random() * 0xFFFFFF);
                 // Remove "multi" from here!
                 default: return 0xC0C0C0;
+            }
+        }
+
+        // Function to randomly select a payload type from enabled options
+        function getRandomPayloadType() {
+            const enabledPayloads = [];
+            
+            if (payloadRegularEnabled) enabledPayloads.push('regular');
+            if (payloadSparklesEnabled) enabledPayloads.push('sparkles');
+            if (payloadSpiralEnabled) enabledPayloads.push('spiral');
+            if (payloadSpiralCloudEnabled) enabledPayloads.push('spiralcloud');
+            if (payloadEllipticalEnabled) enabledPayloads.push('elliptical');
+            
+            // If no payloads are enabled, default to regular
+            if (enabledPayloads.length === 0) {
+                return 'regular';
+            }
+            
+            // Randomly select one of the enabled payload types
+            const randomIndex = Math.floor(Math.random() * enabledPayloads.length);
+            return enabledPayloads[randomIndex];
+        }
+
+        // Function to create explosion based on payload type
+        function createExplosionByPayload(x, y, inheritVx = 0, inheritVy = 0, customProperties = {}) {
+            const payloadType = getRandomPayloadType();
+            
+            switch (payloadType) {
+                case 'regular':
+                    explosions.push(new Explosion(x, y, inheritVx, inheritVy, false, null, customProperties));
+                    break;
+                case 'sparkles':
+                    const sparkleCount = customProperties.particleCount || 120;
+                    sparkleClouds.push(new SparkleCloud(x, y, sparkleCount));
+                    break;
+                case 'spiral':
+                    activeSpiralExplosions.push(new SpiralExplosion(x, y));
+                    break;
+                case 'spiralcloud':
+                    // Create multiple spiral explosions in a cloud pattern
+                    const cloudRadius = 100;
+                    const spiralCount = 16;
+                    for (let i = 0; i < spiralCount; i++) {
+                        const angle = Math.random() * Math.PI * 2;
+                        const distance = Math.random() * cloudRadius;
+                        const spiralX = x + Math.cos(angle) * distance;
+                        const spiralY = y + Math.sin(angle) * distance;
+                        activeSpiralExplosions.push(new SpiralExplosion(spiralX, spiralY));
+                    }
+                    break;
+                case 'elliptical':
+                    const colors = [0xC0C0C0, 0xFFD700]; // Silver and Gold
+                    const color = customProperties.particleColor || colors[Math.floor(Math.random() * colors.length)];
+                    activeEllipticalExplosions.push(new EllipticalExplosion(x, y, color));
+                    break;
+                default:
+                    explosions.push(new Explosion(x, y, inheritVx, inheritVy, false, null, customProperties));
+                    break;
             }
         }
 
@@ -323,6 +443,37 @@ Example:
         });
         randomSecondaryTimingCheckbox.addEventListener('change', () => {
             randomSecondaryTiming = randomSecondaryTimingCheckbox.checked;
+        });
+        rocketMiniExplosionsCheckbox.addEventListener('change', () => {
+            rocketMiniExplosionsEnabled = rocketMiniExplosionsCheckbox.checked;
+        });
+        rocketMiniExplosionIntervalSlider.addEventListener('input', () => {
+            rocketMiniExplosionInterval = parseFloat(rocketMiniExplosionIntervalSlider.value);
+            rocketMiniExplosionIntervalValue.textContent = rocketMiniExplosionInterval;
+        });
+        rocketMiniExplosionParticleCountSlider.addEventListener('input', () => {
+            rocketMiniExplosionParticleCount = parseInt(rocketMiniExplosionParticleCountSlider.value, 10);
+            rocketMiniExplosionParticleCountValue.textContent = rocketMiniExplosionParticleCount;
+        });
+        rocketMiniExplosionSecondaryCheckbox.addEventListener('change', () => {
+            rocketMiniExplosionSecondaryEnabled = rocketMiniExplosionSecondaryCheckbox.checked;
+        });
+
+        // Payload system event listeners
+        payloadRegularCheckbox.addEventListener('change', () => {
+            payloadRegularEnabled = payloadRegularCheckbox.checked;
+        });
+        payloadSparklesCheckbox.addEventListener('change', () => {
+            payloadSparklesEnabled = payloadSparklesCheckbox.checked;
+        });
+        payloadSpiralCheckbox.addEventListener('change', () => {
+            payloadSpiralEnabled = payloadSpiralCheckbox.checked;
+        });
+        payloadSpiralCloudCheckbox.addEventListener('change', () => {
+            payloadSpiralCloudEnabled = payloadSpiralCloudCheckbox.checked;
+        });
+        payloadEllipticalCheckbox.addEventListener('change', () => {
+            payloadEllipticalEnabled = payloadEllipticalCheckbox.checked;
         });
 
         // Auto fire toggle
@@ -460,6 +611,21 @@ Example:
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && showDialog.style.display === 'block') {
                 closeShowDialog();
+            }
+            
+            // Elliptical explosion on 'K' key
+            if (e.key === 'K' || e.key === 'k') {
+                createEllipticalExplosion();
+            }
+            
+            // Spiral explosion on 'L' key
+            if (e.key === 'L' || e.key === 'l') {
+                createSpiralExplosion();
+            }
+            
+            // Spiral cloud on 'N' key
+            if (e.key === 'N' || e.key === 'n') {
+                createSpiralCloud();
             }
         });
 
@@ -802,6 +968,11 @@ Example:
                 } else {
                     this.explosionTriggerPercent = explosionTriggerPercent;
                 }
+                
+                // Mini explosion timing
+                this.lastMiniExplosionTime = 0;
+                this.frameCount = 0;
+                
                 rocketContainer.addChild(this.sprite);
             }
 
@@ -814,6 +985,29 @@ Example:
                 this.sprite.y += this.vy;
                 this.vy += rocketGravity;
                 this.addTrail();
+                this.frameCount++;
+
+                // Check for mini explosions
+                if (rocketMiniExplosionsEnabled) {
+                    const intervalFrames = rocketMiniExplosionInterval * 60; // Convert seconds to frames (assuming 60 FPS)
+                    if (this.frameCount - this.lastMiniExplosionTime >= intervalFrames) {
+                        // Create mini explosion at current rocket position
+                        explosions.push(new Explosion(
+                            this.sprite.x, 
+                            this.sprite.y, 
+                            this.vx * 0.3, // inherit rocket's horizontal velocity (reduced)
+                            this.vy * 0.3, // inherit rocket's vertical velocity (reduced)
+                            false, // not a secondary explosion
+                            null, // use default color logic
+                            { 
+                                particleCount: rocketMiniExplosionParticleCount, 
+                                maxSpeed: 2,
+                                secondaryExplosion: rocketMiniExplosionSecondaryEnabled
+                            } // configurable mini explosion with optional secondary explosions
+                        ));
+                        this.lastMiniExplosionTime = this.frameCount;
+                    }
+                }
 
                 for (let i = this.activeTrails.length - 1; i >= 0; i--) {
                     if (!this.activeTrails[i].update()) {
@@ -826,6 +1020,9 @@ Example:
                 // 100% = explode immediately, 0% = explode at the top (vy crosses 0)
                 let triggerVy = this.initialVy * (1 - this.explosionTriggerPercent / 100);
                 if (this.vy > triggerVy) {
+                    // Create explosion using payload system
+                    createExplosionByPayload(this.sprite.x, this.sprite.y, this.vx, this.vy);
+                    
                     rocketContainer.removeChild(this.sprite);
                     return false;
                 }
@@ -880,6 +1077,7 @@ Example:
                 // Store custom properties
                 this.customParticleCount = customProperties.particleCount;
                 this.customSecondaryExplosion = customProperties.secondaryExplosion;
+                this.customMaxSpeed = customProperties.maxSpeed;
                 
                 this.initParticles();
             }
@@ -892,6 +1090,7 @@ Example:
                 if (!this.isSecondary && randomParticleCount && this.customParticleCount === undefined) {
                     count = Math.floor(Math.random() * (slider.max - slider.min + 1)) + parseInt(slider.min, 10);
                 }
+                
                 for (let i = 0; i < count; i++) {
                     const p = new PIXI.Sprite(explosionParticleTexture);
                     // Assign random color per particle for multi mode, otherwise use this.color
@@ -904,10 +1103,19 @@ Example:
                     p.x = this.x;
                     p.y = this.y;
                     const angle = Math.random() * Math.PI * 2;
-                    let speed = Math.random() * (maxExplosionSpeed - minExplosionSpeed) + minExplosionSpeed;
-                    if (this.isSecondary) {
-                        speed *= 0.5;
+                    
+                    let speed;
+                    if (this.customMaxSpeed !== undefined) {
+                        // Use custom max speed for mini explosions
+                        speed = Math.random() * this.customMaxSpeed;
+                    } else {
+                        // Use default speed calculation
+                        speed = Math.random() * (maxExplosionSpeed - minExplosionSpeed) + minExplosionSpeed;
+                        if (this.isSecondary) {
+                            speed *= 0.5;
+                        }
                     }
+                    
                     p.vx = Math.cos(angle) * speed + this.inheritVx * 0.5;
                     p.vy = Math.sin(angle) * speed + this.inheritVy * 0.5;
                     p.scale.set(this.isSecondary ? 0.3 : 0.5);
@@ -992,6 +1200,125 @@ Example:
             }
         }
 
+        // Elliptical Explosion Class
+        class EllipticalExplosion {
+            constructor(x, y, color) {
+                this.particles = [];
+                this.trails = [];
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.trailsEnabled = particleTrailsEnabled;
+                this.thisLifetime = particleLifetime;
+                
+                // Generate random rotation angle for the ellipse
+                this.rotationAngle = Math.random() * Math.PI * 2;
+                
+                this.initParticles();
+            }
+
+            initParticles() {
+                const count = particleCount;
+                
+                for (let i = 0; i < count; i++) {
+                    const p = new PIXI.Sprite(explosionParticleTexture);
+                    p.tint = this.color;
+                    p.anchor.set(0.5);
+                    p.x = this.x;
+                    p.y = this.y;
+                    
+                    // Generate angle for full 360° coverage
+                    const angle = (i / count) * Math.PI * 2; // Evenly distribute angles
+                    
+                    // Use consistent speed for clean elliptical shape
+                    const baseSpeed = (maxExplosionSpeed + minExplosionSpeed) / 2;
+                    
+                    // Create narrower elliptical pattern
+                    const ellipticalFactorX = 2.0; // Major axis (longer)
+                    const ellipticalFactorY = 0.4; // Minor axis (much shorter for narrow ellipse)
+                    
+                    // Calculate velocity components before rotation
+                    const vxLocal = Math.cos(angle) * baseSpeed * ellipticalFactorX;
+                    const vyLocal = Math.sin(angle) * baseSpeed * ellipticalFactorY;
+                    
+                    // Apply rotation to the velocity components
+                    p.vx = vxLocal * Math.cos(this.rotationAngle) - vyLocal * Math.sin(this.rotationAngle);
+                    p.vy = vxLocal * Math.sin(this.rotationAngle) + vyLocal * Math.cos(this.rotationAngle);
+                    
+                    p.scale.set(0.5);
+                    p.life = this.thisLifetime;
+                    p.maxLife = this.thisLifetime;
+                    p.hasSpawnedSecondary = false;
+                    explosionContainer.addChild(p);
+                    this.particles.push(p);
+                }
+            }
+
+            addParticleTrail(particle) {
+                if (!this.trailsEnabled) return;
+                const trail = new PIXI.Sprite(explosionTrailTexture);
+                trail.tint = particle.tint;
+                trail.alpha = particle.alpha;
+                trail.anchor.set(0.5);
+                trail.x = particle.x;
+                trail.y = particle.y;
+                trail.scale.set(particle.scale.x * 0.9);
+                trail.life = 10;
+                explosionContainer.addChild(trail);
+                this.trails.push(trail);
+            }
+
+            update() {
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const p = this.particles[i];
+                    this.addParticleTrail(p);
+
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += particleGravity;
+                    p.life--;
+                    p.alpha = p.life / p.maxLife;
+
+                    // Secondary explosions
+                    if (
+                        secondaryExplosionsEnabled &&
+                        !p.hasSpawnedSecondary &&
+                        p.life <= 0
+                    ) {
+                        p.hasSpawnedSecondary = true;
+                        
+                        if (randomSecondaryTiming) {
+                            const delay = Math.random() * 1000;
+                            const particleX = p.x;
+                            const particleY = p.y;
+                            const particleColor = p.tint;
+                            setTimeout(() => {
+                                explosions.push(new Explosion(particleX, particleY, 0, 0, true, particleColor));
+                            }, delay);
+                        } else {
+                            explosions.push(new Explosion(p.x, p.y, 0, 0, true, p.tint));
+                        }
+                    }
+
+                    if (p.life <= 0) {
+                        explosionContainer.removeChild(p);
+                        this.particles.splice(i, 1);
+                    }
+                }
+
+                for (let i = this.trails.length - 1; i >= 0; i--) {
+                    const t = this.trails[i];
+                    t.life--;
+                    t.alpha -= 0.04;
+                    if (t.alpha <= 0) {
+                        explosionContainer.removeChild(t);
+                        this.trails.splice(i, 1);
+                    }
+                }
+                return this.particles.length > 0 || this.trails.length > 0;
+            }
+        }
+
         // Sparkle Cloud Class
         class SparkleCloud {
             constructor(x, y, count = 120) {
@@ -1041,8 +1368,138 @@ Example:
             }
         }
 
+        // Spiral Explosion Class
+        class SpiralExplosion {
+            constructor(centerX, centerY) {
+                this.centerX = centerX;
+                this.centerY = centerY;
+                this.angle = Math.random() * Math.PI * 2; // Random starting angle (0 to 360 degrees)
+                this.radius = 0; // Current spiral radius
+                this.frameCount = 0;
+                this.active = true;
+                this.maxRadius = 50; // Keep spiral within 50 pixels radius
+                this.rotationDirection = Math.random() < 0.5 ? 1 : -1; // 50% chance for clockwise (1) or counterclockwise (-1)
+                
+                // Generate random bright color for this spiral
+                this.spiralColor = this.generateBrightColor();
+            }
+            
+            generateBrightColor() {
+                // Create bright colors by ensuring high saturation and brightness
+                const brightColors = [
+                    0xFF0040, // Bright Red
+                    0xFF4000, // Red-Orange
+                    0xFF8000, // Orange
+                    0xFFFF00, // Yellow
+                    0x80FF00, // Yellow-Green
+                    0x00FF00, // Green
+                    0x00FF80, // Green-Cyan
+                    0x00FFFF, // Cyan
+                    0x0080FF, // Light Blue
+                    0x0040FF, // Blue
+                    0x4000FF, // Blue-Purple
+                    0x8000FF, // Purple
+                    0xFF00FF, // Magenta
+                    0xFF0080, // Pink
+                    0xFFFFFF, // White
+                    0xFF6600, // Bright Orange
+                    0x66FF00, // Lime Green
+                    0x0066FF, // Sky Blue
+                    0x6600FF, // Violet
+                    0xFF6600  // Another Orange
+                ];
+                
+                return brightColors[Math.floor(Math.random() * brightColors.length)];
+            }
+
+            update() {
+                if (!this.active) return false;
+
+                this.frameCount++;
+                
+                // Spawn mini-sparkle explosion every frame
+                const x = this.centerX + Math.cos(this.angle) * this.radius;
+                const y = this.centerY + Math.sin(this.angle) * this.radius;
+                
+                // Create mini sparkle explosion with 5 white particles
+                this.createMiniSparkleExplosion(x, y);
+                
+                // Advance spiral: 10 degrees per frame
+                this.angle += (10 * Math.PI) / 180 * this.rotationDirection; // Apply rotation direction
+                this.radius += 0.4; // Slower radius increase to fit within 50px in 2 seconds
+                
+                // Stop after about 2 seconds (120 frames) or when we reach max radius
+                if (this.radius > this.maxRadius || this.frameCount > 120) {
+                    this.active = false;
+                    return false;
+                }
+                
+                return true;
+            }
+
+            createMiniSparkleExplosion(x, y) {
+                const particleCount = 10; // Increased from 5 to 10 particles
+                
+                for (let i = 0; i < particleCount; i++) {
+                    const p = new PIXI.Sprite(explosionParticleTexture);
+                    p.tint = this.spiralColor; // Use the spiral's random bright color
+                    p.anchor.set(0.5);
+                    p.x = x;
+                    p.y = y;
+                    
+                    // Random direction and speed for mini explosion
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = Math.random() * 1.5 + 0.3; // Reduced explosion size (was 2 + 0.5)
+                    p.vx = Math.cos(angle) * speed;
+                    p.vy = Math.sin(angle) * speed;
+                    
+                    p.scale.set(0.3); // Small particles
+                    p.life = 30; // Short lifetime
+                    p.maxLife = 30;
+                    p.hasTrails = false; // No trails for spiral particles
+                    
+                    explosionContainer.addChild(p);
+                    
+                    // Add to sparkle cloud system for management
+                    if (!this.particles) this.particles = [];
+                    this.particles.push(p);
+                }
+            }
+
+            updateParticles() {
+                if (!this.particles) return true;
+                
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const p = this.particles[i];
+                    
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += particleGravity * 0.5; // Reduced gravity for mini particles
+                    p.life--;
+                    
+                    // Base alpha based on lifetime
+                    const baseAlpha = p.life / p.maxLife;
+                    
+                    // Add flickering effect: randomly fully on or off
+                    p.alpha = Math.random() < 0.5 ? baseAlpha : 0;
+                    
+                    // Add slight scale variation for extra sparkle effect
+                    p.scale.set(0.25 + Math.random() * 0.1);
+                    
+                    if (p.life <= 0) {
+                        explosionContainer.removeChild(p);
+                        this.particles.splice(i, 1);
+                    }
+                }
+                
+                return this.particles.length > 0 || this.active;
+            }
+        }
+
         // Management systems
         const activeRockets = [];
+        const activeEllipticalExplosions = [];
+        const activeSpiralExplosions = [];
         const fadingTrails = [];
         const explosions = [];
         const sparkleClouds = [];
@@ -1051,6 +1508,47 @@ Example:
             const x = Math.random() * app.screen.width;
             const targetY = Math.random() * app.screen.height * 0.6;
             activeRockets.push(new Rocket(x, targetY));
+        }
+
+        function createEllipticalExplosion() {
+            const centerX = app.screen.width / 2;
+            const centerY = app.screen.height / 2;
+            
+            // Use only silver or gold colors
+            const colors = [0xC0C0C0, 0xFFD700]; // Silver and Gold
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            
+            // Create the elliptical explosion at center screen
+            activeEllipticalExplosions.push(new EllipticalExplosion(centerX, centerY, color));
+        }
+
+        function createSpiralExplosion() {
+            const centerX = app.screen.width / 2;
+            const centerY = app.screen.height / 2;
+            
+            // Create the spiral explosion starting from center screen
+            activeSpiralExplosions.push(new SpiralExplosion(centerX, centerY));
+        }
+
+        function createSpiralCloud() {
+            const centerX = app.screen.width / 2;
+            const centerY = app.screen.height / 2;
+            const cloudRadius = 100; // 100 pixel radius for the cloud
+            const spiralCount = 16; // 16 spiral explosions
+            
+            // Create 16 spiral explosions randomly distributed within the 100 pixel circle
+            for (let i = 0; i < spiralCount; i++) {
+                // Generate random angle and distance within the circle
+                const angle = Math.random() * Math.PI * 2;
+                const distance = Math.random() * cloudRadius; // Random distance from 0 to cloudRadius
+                
+                // Calculate position within the circle
+                const x = centerX + Math.cos(angle) * distance;
+                const y = centerY + Math.sin(angle) * distance;
+                
+                // Create spiral explosion at the calculated position
+                activeSpiralExplosions.push(new SpiralExplosion(x, y));
+            }
         }
 
         // Timeline-based show controller
@@ -1263,6 +1761,15 @@ Example:
             activeRockets.forEach(rocket => {
                 totalParticles += rocket.activeTrails.length;
             });
+            activeEllipticalExplosions.forEach(ellipticalExplosion => {
+                totalParticles += ellipticalExplosion.particles.length;
+                totalParticles += ellipticalExplosion.trails.length;
+            });
+            activeSpiralExplosions.forEach(spiralExplosion => {
+                if (spiralExplosion.particles) {
+                    totalParticles += spiralExplosion.particles.length;
+                }
+            });
             fadingTrails.forEach(trail => {
                 totalParticles += trail.activeTrails.length;
             });
@@ -1292,15 +1799,13 @@ Example:
                         customProperties.secondaryExplosion = activeRockets[i].customSecondaryExplosion;
                     }
                     
-                    explosions.push(new Explosion(
+                    createExplosionByPayload(
                         activeRockets[i].sprite.x,
                         activeRockets[i].sprite.y,
                         activeRockets[i].vx,
                         activeRockets[i].vy,
-                        false,
-                        null,
                         customProperties
-                    ));
+                    );
                     activeRockets.splice(i, 1);
                 }
             }
@@ -1316,6 +1821,25 @@ Example:
             for (let i = explosions.length - 1; i >= 0; i--) {
                 if (!explosions[i].update()) {
                     explosions.splice(i, 1);
+                }
+            }
+
+            // Update elliptical explosions
+            for (let i = activeEllipticalExplosions.length - 1; i >= 0; i--) {
+                if (!activeEllipticalExplosions[i].update()) {
+                    activeEllipticalExplosions.splice(i, 1);
+                }
+            }
+
+            // Update spiral explosions
+            for (let i = activeSpiralExplosions.length - 1; i >= 0; i--) {
+                // Update spiral position and spawn new mini explosions
+                const spiralActive = activeSpiralExplosions[i].update();
+                // Update existing particles from this spiral
+                const particlesActive = activeSpiralExplosions[i].updateParticles();
+                
+                if (!spiralActive && !particlesActive) {
+                    activeSpiralExplosions.splice(i, 1);
                 }
             }
 
@@ -1356,9 +1880,9 @@ Example:
         app.stage.on('pointerdown', (e) => {
             console.log('Click detected! Auto fire enabled:', autoFireEnabled, 'Burst mode enabled:', burstModeEnabled);
             if (autoFireEnabled) {
-                // When auto fire is enabled, clicking creates explosions
+                // When auto fire is enabled, clicking creates explosions using payload system
                 console.log('Creating explosion at:', e.global.x, e.global.y);
-                explosions.push(new Explosion(e.global.x, e.global.y));
+                createExplosionByPayload(e.global.x, e.global.y);
             } else {
                 // When auto fire is disabled, clicking fires rockets
                 if (burstModeEnabled) {
@@ -1385,7 +1909,7 @@ Example:
             
             if (autoFireEnabled) {
                 console.log('Creating explosion at:', x, y);
-                explosions.push(new Explosion(x, y));
+                createExplosionByPayload(x, y);
             } else {
                 // When auto fire is disabled, clicking fires rockets
                 if (burstModeEnabled) {
