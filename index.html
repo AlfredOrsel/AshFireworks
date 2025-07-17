@@ -341,6 +341,7 @@ Example:
 
         // Function to create explosion based on payload type
         function createExplosionByPayload(x, y, inheritVx = 0, inheritVy = 0, customProperties = {}) {
+            debugger; // This will force a breakpoint when DevTools are open
             const payloadType = getRandomPayloadType();
             
             switch (payloadType) {
@@ -1020,8 +1021,22 @@ Example:
                 // 100% = explode immediately, 0% = explode at the top (vy crosses 0)
                 let triggerVy = this.initialVy * (1 - this.explosionTriggerPercent / 100);
                 if (this.vy > triggerVy) {
-                    // Create explosion using payload system
-                    createExplosionByPayload(this.sprite.x, this.sprite.y, this.vx, this.vy);
+                    // Create explosion using payload system with custom properties
+                    const customProperties = {};
+                    if (this.customParticleCount !== undefined) {
+                        customProperties.particleCount = this.customParticleCount;
+                    }
+                    if (this.customParticleColor !== undefined) {
+                        customProperties.particleColor = this.customParticleColor;
+                    }
+                    if (this.customTrailEnabled !== undefined) {
+                        customProperties.trailEnabled = this.customTrailEnabled;
+                    }
+                    if (this.customSecondaryExplosion !== undefined) {
+                        customProperties.secondaryExplosion = this.customSecondaryExplosion;
+                    }
+                    
+                    createExplosionByPayload(this.sprite.x, this.sprite.y, this.vx, this.vy, customProperties);
                     
                     rocketContainer.removeChild(this.sprite);
                     return false;
@@ -1783,29 +1798,6 @@ Example:
             for (let i = activeRockets.length - 1; i >= 0; i--) {
                 if (!activeRockets[i].update()) {
                     fadingTrails.push(activeRockets[i]);
-                    
-                    // Prepare custom properties for explosion
-                    const customProperties = {};
-                    if (activeRockets[i].customParticleCount !== undefined) {
-                        customProperties.particleCount = activeRockets[i].customParticleCount;
-                    }
-                    if (activeRockets[i].customParticleColor !== undefined) {
-                        customProperties.particleColor = activeRockets[i].customParticleColor;
-                    }
-                    if (activeRockets[i].customTrailEnabled !== undefined) {
-                        customProperties.trailEnabled = activeRockets[i].customTrailEnabled;
-                    }
-                    if (activeRockets[i].customSecondaryExplosion !== undefined) {
-                        customProperties.secondaryExplosion = activeRockets[i].customSecondaryExplosion;
-                    }
-                    
-                    createExplosionByPayload(
-                        activeRockets[i].sprite.x,
-                        activeRockets[i].sprite.y,
-                        activeRockets[i].vx,
-                        activeRockets[i].vy,
-                        customProperties
-                    );
                     activeRockets.splice(i, 1);
                 }
             }
